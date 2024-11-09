@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Gen</h1>
+    </div>
+
+    <script>
+      // APIs
+      function createComponent(genFunc, $host) {
+        const gen = genFunc({ $host });
+        gen.next();
+        $host.render = (state = {}) => gen.next(state);
+        $host.return = () => gen.return();
+        $host.throw = (error) => gen.throw(error);
+        $host.clear = () => {
+          $host.return = undefined;
+          $host.render = undefined;
+          $host.throw = undefined;
+        };
+        return $host;
+      }
+
+      function withView(view, modelView) {
+        return function* ({ $host }) {
+          modelView({ $host });
+          try {
+            while (true) {
+              yield* view({ $host, state: yield });
+            }
+          } catch (error) {
+            console.log("error", error);
+          } finally {
+            console.log("cleaning up");
+          }
+        };
+      }
+    </script>
+
+    <script>
+      // implementation
+      function* counterTemplate({ $host, state }) {
+        $host.textContent = `${state.label}: ${state.value}`;
+      }
+
+      function counterClick({ $host }) {
+        let counter = 0;
+
+        function increment() {
+          counter += 1;
+          $host.render({ label: "Counter", value: counter });
+
+          if (counter === 5) {
+            $host.render({ label: "Counter", value: "You have reached 5!" });
+            $host.return();
+            $host.clear();
+            $host.removeEventListener("click", increment);
+          }
+        }
+
+        $host.addEventListener("click", increment);
+      }
+
+      const CounterComponent = createComponent(
+        withView(counterTemplate, counterClick),
+        document.getElementById("app")
+      );
+
+      CounterComponent.render({
+        label: "Counter default",
+        value: "yet to be counted!",
+      });
+    </script>
+
+    <script>
+      // web component
+      
+    </script>
+  </body>
+</html>
